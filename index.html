@@ -8,25 +8,25 @@
   <style>
     :root{
       /* Edison brand palette */
-      --brand:       #0a5a4b;  /* xanh lá đậm (primary) */
-      --brand-600:   #09604f;  /* hover của primary (đậm hơn chút) */
-      --accent-1:    #9baf4b;  /* xanh lá nhạt */
-      --accent-2:    #f05a23;  /* cam đỏ (nút/nhấn) */
-      --accent-3:    #faaf28;  /* cam sáng (badge) */
-      --accent-4:    #915028;  /* nâu đất */
-      --neutral:     #b4b4b4;  /* xám trung tính */
+      --brand:       #0a5a4b;  /* primary */
+      --brand-600:   #09604f;  /* hover of primary */
+      --accent-1:    #9baf4b;
+      --accent-2:    #f05a23;  /* CTA / user bubble */
+      --accent-3:    #faaf28;  /* badge */
+      --accent-4:    #915028;
+      --neutral:     #b4b4b4;
 
-      /* Light mode surfaces */
-      --bg:    #f7f9fc;        /* nền trang */
-      --card:  #ffffff;        /* nền khung chat */
-      --text:  #0b1220;        /* màu chữ chính */
-      --muted: #5b6b86;        /* chữ phụ */
+      /* Light surfaces */
+      --bg:    #f7f9fc;
+      --card:  #ffffff;
+      --text:  #0b1220;
+      --muted: #5b6b86;
 
-      /* Bubble (tông sáng) */
-      --bubble-bot:  #e7f2ef;  /* xanh lá rất nhạt */
-      --bubble-user: #ffe9e1;  /* cam rất nhạt */
+      /* Bubbles */
+      --bubble-bot:  #e7f2ef;  /* very light green */
+      --bubble-user: #ffe9e1;  /* very light orange */
 
-      --border: #e5e9f0;       /* viền nhẹ */
+      --border: #e5e9f0;
       --radius: 16px;
       --shadow: 0 10px 24px rgba(17, 24, 39, .06);
     }
@@ -50,9 +50,10 @@
     .msg{display:flex;gap:10px;margin:12px 2px}
     .msg .avatar{
       width:32px;height:32px;border-radius:50%;flex:0 0 32px;
-      display:flex;align-items:center;justify-content:center;
+      display:flex;align-items:center;justify-content:center;overflow:hidden;
       background:#e9eef7;color:#274472;font-weight:700;border:1px solid var(--border)
     }
+    .msg .avatar img{width:32px;height:32px;object-fit:cover;border-radius:50%}
     .bubble{max-width:75%;padding:12px 14px;border-radius:14px;position:relative;border:1px solid var(--border)}
     .meta{font-size:12px;color:var(--muted);margin-top:6px}
     .bot .bubble{background:var(--bubble-bot);border-top-left-radius:6px}
@@ -65,6 +66,14 @@
       background:#f4f7fb;color:#2a3a4f;cursor:pointer
     }
     .btnx:hover{background:#eef2f9}
+
+    /* Quick prompts */
+    .prompts{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+    .prompts .qp{
+      background:#f4f7fb;border:1px solid var(--border);
+      padding:6px 10px;border-radius:999px;cursor:pointer;font-size:14px;color:var(--text)
+    }
+    .prompts .qp:hover{background:var(--accent-1);color:#fff;border-color:var(--accent-1)}
 
     /* Input bar */
     .bar{display:flex;gap:10px;margin-top:12px}
@@ -104,6 +113,14 @@
 
     <div id="chat" class="chat"></div>
 
+    <!-- QUICK PROMPTS -->
+    <div class="prompts">
+      <button class="qp">Quy trình CPD</button>
+      <button class="qp">SEL là gì?</button>
+      <button class="qp">Timeline đánh giá</button>
+      <button class="qp">Hướng dẫn rubric</button>
+    </div>
+
     <div class="bar">
       <textarea id="inp" placeholder="Nhập câu hỏi… (Enter = gửi, Shift+Enter = xuống dòng)"></textarea>
       <button id="btn" class="send">Gửi</button>
@@ -117,44 +134,57 @@
     const $inp  = document.getElementById('inp');
     const $btn  = document.getElementById('btn');
 
-    const KEY = 'cpd_chat_history_light';
+    const KEY = 'cpd_chat_history_light_v2';
     const history = JSON.parse(localStorage.getItem(KEY) || '[]');
 
     function saveHistory(){ localStorage.setItem(KEY, JSON.stringify(history)); }
     function timeStr(iso){ return new Date(iso).toLocaleString(); }
     function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
 
-    function bubbleHTML(role, content, t){
-  const side = role === 'user' ? 'user' : 'bot';
-
-  // avatar mới
-  const ava = side === 'bot'
-    ? `<div class="avatar"><img src="bot.png" alt="Bot" style="width:32px;height:32px;border-radius:50%"></div>`
-    : `<div class="avatar"><img src="user.png" alt="User" style="width:32px;height:32px;border-radius:50%"></div>`;
-
-  const tools = side==='bot'
-    ? `<div class="tools"><button class="btnx" data-copy="${esc(content)}">Copy</button></div>` : '';
-
-  return `
-    <div class="msg ${side}">
-      ${ava}
-      <div>
-        <div class="bubble">${content}</div>
-        ${tools}
-        <div class="meta">${timeStr(t)}</div>
-      </div>
-    </div>`;
+    // Bullet & xuống dòng cơ bản
+    function formatReply(text){
+  let html = (text || "").replace(/\n/g,'<br>');
+  // thêm 👉 trước nội dung bullet
+  html = html.replace(/^- (.*)$/gm,'<li>👉 $1</li>');
+  html = html.replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>');
+  return html;
 }
 
 
+    // Render bubble; user -> escape; bot -> html (đã format)
+    function bubbleHTML(role, content, t){
+      const side = role === 'user' ? 'user' : 'bot';
+      const ava  = side === 'bot'
+        ? `<div class="avatar"><img src="bot.png" alt="Bot"></div>`
+        : `<div class="avatar"><img src="user.png" alt="User"></div>`;
+
+      const tools = side==='bot'
+        ? `<div class="tools"><button class="btnx" data-copy="${esc(content)}">Copy</button></div>`
+        : '';
+
+      const safeContent = side==='user' ? esc(content) : content; // bot cho phép HTML đã format
+
+      return `
+      <div class="msg ${side}">
+        ${ava}
+        <div>
+          <div class="bubble">${safeContent}</div>
+          ${tools}
+          <div class="meta">${timeStr(t)}</div>
+        </div>
+      </div>`;
+    }
+
     function render(){
-      $chat.innerHTML = history.map(m => bubbleHTML(m.role, esc(m.content), m.t)).join('');
+      $chat.innerHTML = history.map(m => bubbleHTML(m.role, m.role==='user' ? esc(m.content) : formatReply(m.content), m.t)).join('');
       $chat.scrollTop = $chat.scrollHeight;
     }
+
     function addMessage(role, content){
       const item = { role, content, t: new Date().toISOString() };
       history.push(item); saveHistory(); render();
     }
+
     function showTyping(){
       const t = new Date().toISOString();
       const html = bubbleHTML('assistant', `<span class="typing"><span></span><span></span><span></span></span>`, t);
@@ -162,12 +192,31 @@
       $chat.scrollTop = $chat.scrollHeight;
       return t;
     }
-    function replaceLastBotBubble(text){
+
+    function replaceLastBotBubbleHTML(html){
       const nodes = $chat.querySelectorAll('.msg.bot .bubble');
       for(let i=nodes.length-1;i>=0;i--){
-        if(nodes[i].innerHTML.includes('typing')){ nodes[i].innerHTML = esc(text); break; }
+        if(nodes[i].innerHTML.includes('typing')){ nodes[i].innerHTML = html; break; }
       }
       $chat.scrollTop = $chat.scrollHeight;
+    }
+
+    // Typewriter “giả streaming”
+    function typeOutHTML(finalHTML, bubbleNode, speed=8){
+      // gõ dần dưới dạng text để mượt, rồi chốt bằng HTML đã format
+      const plain = finalHTML
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/?ul>|<\/?li>/gi, '')
+        .replace(/&nbsp;/g,' ');
+      let i=0;
+      return new Promise(resolve=>{
+        const timer=setInterval(()=>{
+          i++;
+          bubbleNode.innerHTML = esc(plain.slice(0,i)).replace(/\n/g,'<br>');
+          $chat.scrollTop = $chat.scrollHeight;
+          if(i>=plain.length){ clearInterval(timer); bubbleNode.innerHTML = finalHTML; resolve(); }
+        }, speed);
+      });
     }
 
     // Copy-to-clipboard
@@ -180,15 +229,27 @@
       });
     });
 
-    render();
+    // Quick prompts
+    document.querySelectorAll('.prompts .qp').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        $inp.value = btn.textContent;
+        send();
+      });
+    });
+
+    // Khởi tạo lời chào / render lịch sử
     if (!history.length) {
       addMessage('assistant','Chào bạn 👋 Mình là CPD Coach Edison (Light). Bạn muốn hỏi gì về CPD hôm nay?');
+    } else {
+      render();
     }
 
+    // === SEND (JSON + typewriter) ===
     async function send(){
       const text = $inp.value.trim();
       if(!text) return;
       $inp.value = ''; $inp.focus(); $btn.disabled = true; $inp.disabled = true;
+
       addMessage('user', text);
       showTyping();
 
@@ -199,36 +260,21 @@
           body: JSON.stringify({ messages: history })
         });
         if(!res.ok) throw new Error('Server trả trạng thái ' + res.status);
-        const reader = res.body.getReader();
-let decoder = new TextDecoder();
-let reply = "";
 
-// tạo bubble trống để update dần
-addMessage('assistant', "");
-const nodes = $chat.querySelectorAll('.msg.bot .bubble');
-const bubble = nodes[nodes.length-1];
+        // Nhận JSON { reply: "..." }
+        const data = await res.json();
+        const finalText = data.reply || '[Không có phản hồi]';
+        const finalHTML = formatReply(finalText);
 
-while (true) {
-  const { done, value } = await reader.read();
-  if (done) break;
-  reply += decoder.decode(value, { stream: true });
-  bubble.innerHTML = esc(reply);
-}
+        // Lấy bubble 'đang gõ' để gõ dần
+        const nodes = $chat.querySelectorAll('.msg.bot .bubble');
+        const bubble = nodes[nodes.length-1];
+        await typeOutHTML(finalHTML, bubble, 8); // tốc độ gõ
 
+        // Lưu hội thoại ở dạng text để lần sau render() format lại
+        addMessage('assistant', finalText);
       }catch(err){
-        function formatReply(text) {
-  // thay \n bằng <br>
-  let html = text.replace(/\n/g, '<br>');
-  // nhận diện bullet kiểu "- " ở đầu dòng
-  html = html.replace(/^- (.*)$/gm, '<li>$1</li>');
-  // gộp thành danh sách ul
-  html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
-  return html;
-}
-
-replaceLastBotBubble(formatReply(data.reply || '[Không có phản hồi]'));
-addMessage('assistant', data.reply || '[Không có phản hồi]');
-
+        replaceLastBotBubbleHTML('⚠️ Lỗi: '+ esc(err.message));
       }finally{
         $btn.disabled = false; $inp.disabled = false;
       }
