@@ -3,7 +3,7 @@
   node_bundler = "esbuild"
 
 [build]
-  command = ""
+  command = "npm install"
   publish = "."
 
 # Bật CORS đơn giản khi dev local với Netlify CLI
