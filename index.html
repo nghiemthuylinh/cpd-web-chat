@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CPD Coach – Lite Chat</title>
+  <style>
+    :root { --bg:#0b1220; --card:#121a2b; --muted:#8ea0bf; --text:#e8eefc; }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto}
+    .wrap{max-width:840px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:24px}
+    .title{font-weight:700;font-size:20px;opacity:.9;margin-bottom:12px}
+    .chat{flex:1;background:var(--card);border-radius:16px;padding:16px;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .msg{display:flex;gap:12px;margin:10px 0}
+    .msg.user{justify-content:flex-end}
+    .bubble{max-width:75%;padding:10px 12px;border-radius:14px}
+    .user .bubble{background:#2a3a63}
+    .bot .bubble{background:#1a2442}
+    .meta{font-size:12px;color:var(--muted);margin-top:4px}
+    .bar{display:flex;gap:10px;margin-top:12px}
+    input[type=text]{flex:1;padding:12px;border-radius:10px;border:1px solid #2b3a5a;background:#0f172a;color:var(--text)}
+    button{padding:12px 16px;border-radius:10px;border:0;cursor:pointer;background:#3b82f6;color:white;font-weight:600}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .note{color:var(--muted);font-size:12px;margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">CPD Coach – Lite Chat</div>
+    <div id="chat" class="chat"></div>
+    <div class="bar">
+      <input id="inp" type="text" placeholder="Nhập câu hỏi… (Shift+Enter để xuống dòng)" />
+      <button id="btn">Gửi</button>
+    </div>
+    <div class="note">Lưu ý: hội thoại được lưu cục bộ trên trình duyệt của bạn.</div>
+  </div>
+
+  <script>
+    const $chat = document.getElementById('chat');
+    const $inp  = document.getElementById('inp');
+    const $btn  = document.getElementById('btn');
+    const ENDPOINT = '/.netlify/functions/chat';
+
+    // Lưu hội thoại phía client để giữ ngữ cảnh (fallback đơn giản)
+    const KEY = 'cpd_chat_history';
+    const history = JSON.parse(localStorage.getItem(KEY) || '[]');
+
+    function saveHistory() { localStorage.setItem(KEY, JSON.stringify(history)); }
+    function addMessage(role, content) {
+      history.push({ role, content, t: new Date().toISOString() }); saveHistory(); render();
+    }
+    function esc(s){return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+    function render() {
+      $chat.innerHTML = history.map(m=>{
+        const side = m.role === 'user' ? 'user' : 'bot';
+        return `
+          <div class="msg ${side}">
+            <div class="bubble">
+              <div>${esc(m.content)}</div>
+              <div class="meta">${new Date(m.t).toLocaleString()}</div>
+            </div>
+          </div>`;
+      }).join('');
+      $chat.scrollTop = $chat.scrollHeight;
+    }
+    render();
+
+    async function send() {
+      const text = $inp.value.trim();
+      if (!text) return;
+      $inp.value = ''; $inp.disabled = true; $btn.disabled = true;
+      addMessage('user', text);
+
+      try {
+        // Gửi toàn bộ history để giữ ngữ cảnh (cách dễ cho người mới)
+        const res = await fetch(ENDPOINT, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ messages: history })
+        });
+        if (!res.ok) throw new Error('Server trả trạng thái ' + res.status);
+        const data = await res.json();
+        addMessage('assistant', data.reply || '[Không có phản hồi]');
+      } catch (err) {
+        console.error(err);
+        addMessage('assistant', `⚠️ Lỗi: ${err.message}`);
+      } finally {
+        $inp.disabled = false; $btn.disabled = false; $inp.focus();
+      }
+    }
+
+    $btn.addEventListener('click', send);
+    $inp.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+
+    // Gợi ý mở màn
+    if (!history.length) {
+      addMessage('assistant', 'Chào bạn 👋 Mình là CPD Coach. Bạn muốn hỏi gì về CPD hôm nay?');
+    }
+  </script>
+</body>
+</html>

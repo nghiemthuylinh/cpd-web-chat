@@ -1,0 +1,8 @@
+{
+  "name": "cpd-web-chat",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "openai": "^4.60.0"
+  }
+}

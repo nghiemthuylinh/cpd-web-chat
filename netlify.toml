@@ -1,0 +1,13 @@
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[build]
+  command = ""
+  publish = "."
+
+# Bật CORS đơn giản khi dev local với Netlify CLI
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
