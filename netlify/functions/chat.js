@@ -1,4 +1,4 @@
-// netlify/functions/chat.js — Assistant mode + debug
+// netlify/functions/chat.js — Assistants API (Threads + Runs) + debug
 import OpenAI from "openai";
 
 const ok = (body, statusCode = 200) => ({
@@ -23,42 +23,58 @@ export async function handler(event) {
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
-    const asstId = process.env.ASSISTANT_ID;
+    const assistantId = process.env.ASSISTANT_ID;
 
-    // DEBUG: in log, we only print booleans (không lộ key)
-    console.log("ENV_OK", {
-      hasApiKey: !!apiKey,
-      hasAssistantId: !!asstId,
-      model: "gpt-4o-mini"
-    });
-
+    console.log("ENV_OK", { hasApiKey: !!apiKey, hasAssistantId: !!assistantId });
     if (!apiKey) return ok({ error: "Thiếu OPENAI_API_KEY" }, 500);
-    if (!asstId) return ok({ error: "Thiếu ASSISTANT_ID" }, 500);
+    if (!assistantId) return ok({ error: "Thiếu ASSISTANT_ID" }, 500);
 
     const client = new OpenAI({ apiKey });
 
-    const lastUser = [...messages].reverse().find(m => m.role === "user")?.content || "";
+    // Gộp lịch sử hội thoại từ client thành 1 message người dùng
     const transcript = messages
       .map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
       .join("\n");
 
-    // Responses API with assistant_id + model
-    const resp = await client.responses.create({
-      model: "gpt-4o-mini",     // BẮT BUỘC có model
-      assistant_id: asstId,
-      input: [
-        { role: "user", content: `Context so far:\n${transcript}\n\nUser (new): ${lastUser}` }
-      ]
-      // Assistant sẽ tự dùng instructions/files/tools bạn đã cấu hình trong Platform
+    // 1) Tạo thread
+    const thread = await client.beta.threads.create();
+
+    // 2) Thêm 1 user message (chứa toàn bộ transcript để giữ ngữ cảnh đơn giản)
+    await client.beta.threads.messages.create(thread.id, {
+      role: "user",
+      content: transcript
     });
 
+    // 3) Tạo run bằng assistant_id
+    let run = await client.beta.threads.runs.create(thread.id, {
+      assistant_id: assistantId
+      // Lưu ý: model/instructions… lấy từ Assistant bạn đã cấu hình trên Platform
+    });
+
+    // 4) Poll tới khi hoàn tất (timeout ~45s)
+    const deadline = Date.now() + 45_000;
+    while (["queued", "in_progress", "requires_action"].includes(run.status)) {
+      if (Date.now() > deadline) throw new Error("Run timeout");
+      await new Promise(r => setTimeout(r, 1000));
+      run = await client.beta.threads.runs.retrieve(thread.id, run.id);
+    }
+
+    if (run.status !== "completed") {
+      console.error("RUN_NOT_COMPLETED", run.status, run.last_error || "");
+      throw new Error(`Run not completed: ${run.status}`);
+    }
+
+    // 5) Lấy tin nhắn cuối cùng từ assistant
+    const msgList = await client.beta.threads.messages.list(thread.id, { limit: 1 });
+    const latest = msgList.data?.[0];
+    const parts = latest?.content || [];
     const reply =
-      resp.output_text ??
-      resp.output?.[0]?.content?.[0]?.text?.value ??
-      "[No reply]";
+      parts.find(p => p.type === "text")?.text?.value ??
+      "[No text in assistant response]";
+
     return ok({ reply });
   } catch (err) {
-    console.error("[chat-func/asst] error:", err);
+    console.error("[chat-func/assistants] error:", err);
     return ok({ error: err.message || "Server error" }, 500);
   }
 }
