@@ -199,9 +199,22 @@
           body: JSON.stringify({ messages: history })
         });
         if(!res.ok) throw new Error('Server trả trạng thái ' + res.status);
-        const data = await res.json();
-        replaceLastBotBubble(data.reply || '[Không có phản hồi]');
-        addMessage('assistant', data.reply || '[Không có phản hồi]');
+        const reader = res.body.getReader();
+let decoder = new TextDecoder();
+let reply = "";
+
+// tạo bubble trống để update dần
+addMessage('assistant', "");
+const nodes = $chat.querySelectorAll('.msg.bot .bubble');
+const bubble = nodes[nodes.length-1];
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  reply += decoder.decode(value, { stream: true });
+  bubble.innerHTML = esc(reply);
+}
+
       }catch(err){
         function formatReply(text) {
   // thay \n bằng <br>

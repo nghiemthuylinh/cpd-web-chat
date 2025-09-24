@@ -1,80 +1,60 @@
-// netlify/functions/chat.js — Assistants API (Threads + Runs) + debug
+// netlify/functions/chat.js — streaming mode
 import OpenAI from "openai";
 
-const ok = (body, statusCode = 200) => ({
-  statusCode,
-  headers: {
-    "Content-Type": "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS"
-  },
-  body: JSON.stringify(body)
-});
-
 export async function handler(event) {
-  if (event.httpMethod === "OPTIONS") return ok({});
-  if (event.httpMethod !== "POST") return ok({ error: "Method not allowed" }, 405);
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+      },
+      body: ""
+    };
+  }
+
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: "Method not allowed" };
+  }
 
   try {
     const { messages } = JSON.parse(event.body || "{}");
     if (!Array.isArray(messages) || !messages.length) {
-      return ok({ error: "Thiếu messages (mảng {role, content})" }, 400);
+      return { statusCode: 400, body: "Thiếu messages" };
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    const assistantId = process.env.ASSISTANT_ID;
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    console.log("ENV_OK", { hasApiKey: !!apiKey, hasAssistantId: !!assistantId });
-    if (!apiKey) return ok({ error: "Thiếu OPENAI_API_KEY" }, 500);
-    if (!assistantId) return ok({ error: "Thiếu ASSISTANT_ID" }, 500);
-
-    const client = new OpenAI({ apiKey });
-
-    // Gộp lịch sử hội thoại từ client thành 1 message người dùng
-    const transcript = messages
-      .map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
-      .join("\n");
-
-    // 1) Tạo thread
-    const thread = await client.beta.threads.create();
-
-    // 2) Thêm 1 user message (chứa toàn bộ transcript để giữ ngữ cảnh đơn giản)
-    await client.beta.threads.messages.create(thread.id, {
-      role: "user",
-      content: transcript
+    const stream = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "Bạn là CPD Coach, trả lời ngắn gọn, step-by-step, ưu tiên tiếng Việt." },
+        ...messages
+      ],
+      stream: true
     });
 
-    // 3) Tạo run bằng assistant_id
-    let run = await client.beta.threads.runs.create(thread.id, {
-      assistant_id: assistantId
-      // Lưu ý: model/instructions… lấy từ Assistant bạn đã cấu hình trên Platform
-    });
-
-    // 4) Poll tới khi hoàn tất (timeout ~45s)
-    const deadline = Date.now() + 45_000;
-    while (["queued", "in_progress", "requires_action"].includes(run.status)) {
-      if (Date.now() > deadline) throw new Error("Run timeout");
-      await new Promise(r => setTimeout(r, 1000));
-      run = await client.beta.threads.runs.retrieve(thread.id, run.id);
+    // Trả về dạng text/event-stream
+    const encoder = new TextEncoder();
+    const chunks = [];
+    for await (const part of stream) {
+      const delta = part.choices[0]?.delta?.content;
+      if (delta) {
+        chunks.push(delta);
+      }
     }
 
-    if (run.status !== "completed") {
-      console.error("RUN_NOT_COMPLETED", run.status, run.last_error || "");
-      throw new Error(`Run not completed: ${run.status}`);
-    }
-
-    // 5) Lấy tin nhắn cuối cùng từ assistant
-    const msgList = await client.beta.threads.messages.list(thread.id, { limit: 1 });
-    const latest = msgList.data?.[0];
-    const parts = latest?.content || [];
-    const reply =
-      parts.find(p => p.type === "text")?.text?.value ??
-      "[No text in assistant response]";
-
-    return ok({ reply });
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Access-Control-Allow-Origin": "*"
+      },
+      body: JSON.stringify({ reply: chunks.join("") })
+    };
   } catch (err) {
-    console.error("[chat-func/assistants] error:", err);
-    return ok({ error: err.message || "Server error" }, 500);
+    console.error("[chat-func] error:", err);
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 }
