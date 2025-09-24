@@ -1,4 +1,4 @@
-// netlify/functions/chat.js  — Assistant mode (Responses API)
+// netlify/functions/chat.js — Assistant mode + debug
 import OpenAI from "openai";
 
 const ok = (body, statusCode = 200) => ({
@@ -24,31 +24,34 @@ export async function handler(event) {
 
     const apiKey = process.env.OPENAI_API_KEY;
     const asstId = process.env.ASSISTANT_ID;
+
+    // DEBUG: in log, we only print booleans (không lộ key)
+    console.log("ENV_OK", {
+      hasApiKey: !!apiKey,
+      hasAssistantId: !!asstId,
+      model: "gpt-4o-mini"
+    });
+
     if (!apiKey) return ok({ error: "Thiếu OPENAI_API_KEY" }, 500);
     if (!asstId) return ok({ error: "Thiếu ASSISTANT_ID" }, 500);
 
     const client = new OpenAI({ apiKey });
 
-    // Lấy câu người dùng mới nhất
     const lastUser = [...messages].reverse().find(m => m.role === "user")?.content || "";
-
-    // Gói lịch sử thành transcript ngắn gọn để giữ ngữ cảnh
     const transcript = messages
       .map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
       .join("\n");
 
-    // Gọi Assistant qua Responses API
+    // Responses API with assistant_id + model
     const resp = await client.responses.create({
-      model: "gpt-4o-mini",     // BẮT BUỘC có model để tránh lỗi "Missing model"
-      assistant_id: asstId,     // đúng Assistant “CPD Coach”
-      // Truyền ngữ cảnh + câu hỏi mới nhất
+      model: "gpt-4o-mini",     // BẮT BUỘC có model
+      assistant_id: asstId,
       input: [
         { role: "user", content: `Context so far:\n${transcript}\n\nUser (new): ${lastUser}` }
       ]
-      // Nếu Assistant có File Search/Tools, nó sẽ tự bật theo cấu hình của bạn
+      // Assistant sẽ tự dùng instructions/files/tools bạn đã cấu hình trong Platform
     });
 
-    // Lấy text trả về (ưu tiên output_text, fallback sang cấu trúc content)
     const reply =
       resp.output_text ??
       resp.output?.[0]?.content?.[0]?.text?.value ??
