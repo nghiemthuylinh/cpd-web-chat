@@ -125,12 +125,27 @@
     function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
 
     function bubbleHTML(role, content, t){
-      const side = role === 'user' ? 'user' : 'bot';
-      const ava  = side==='bot' ? `<div class="avatar">A</div>` : `<div class="avatar">U</div>`;
-      const tools = side==='bot'
-        ? `<div class="tools"><button class="btnx" data-copy="${esc(content)}">Copy</button></div>` : '';
-      return `<div class="msg ${side}">${ava}<div><div class="bubble">${content}</div>${tools}<div class="meta">${timeStr(t)}</div></div></div>`;
-    }
+  const side = role === 'user' ? 'user' : 'bot';
+
+  // avatar mới
+  const ava = side === 'bot'
+    ? `<div class="avatar"><img src="bot.png" alt="Bot" style="width:32px;height:32px;border-radius:50%"></div>`
+    : `<div class="avatar"><img src="user.png" alt="User" style="width:32px;height:32px;border-radius:50%"></div>`;
+
+  const tools = side==='bot'
+    ? `<div class="tools"><button class="btnx" data-copy="${esc(content)}">Copy</button></div>` : '';
+
+  return `
+    <div class="msg ${side}">
+      ${ava}
+      <div>
+        <div class="bubble">${content}</div>
+        ${tools}
+        <div class="meta">${timeStr(t)}</div>
+      </div>
+    </div>`;
+}
+
 
     function render(){
       $chat.innerHTML = history.map(m => bubbleHTML(m.role, esc(m.content), m.t)).join('');
@@ -188,8 +203,19 @@
         replaceLastBotBubble(data.reply || '[Không có phản hồi]');
         addMessage('assistant', data.reply || '[Không có phản hồi]');
       }catch(err){
-        replaceLastBotBubble('⚠️ Lỗi: ' + err.message);
-        addMessage('assistant', '⚠️ Lỗi: ' + err.message);
+        function formatReply(text) {
+  // thay \n bằng <br>
+  let html = text.replace(/\n/g, '<br>');
+  // nhận diện bullet kiểu "- " ở đầu dòng
+  html = html.replace(/^- (.*)$/gm, '<li>$1</li>');
+  // gộp thành danh sách ul
+  html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+  return html;
+}
+
+replaceLastBotBubble(formatReply(data.reply || '[Không có phản hồi]'));
+addMessage('assistant', data.reply || '[Không có phản hồi]');
+
       }finally{
         $btn.disabled = false; $inp.disabled = false;
       }
