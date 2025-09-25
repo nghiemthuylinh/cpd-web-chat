@@ -30,6 +30,9 @@ export async function handler(event) {
     if (!assistantId) return ok({ error: "Thiếu ASSISTANT_ID" }, 500);
 
     const client = new OpenAI({ apiKey });
+if(message.role === "assistant" && message.type === "code"){
+   addCopyButton(el);
+}
 
     // Gộp lịch sử thành transcript để giữ ngữ cảnh ngắn gọn
     const transcript = messages
