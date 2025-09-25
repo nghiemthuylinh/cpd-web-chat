@@ -59,7 +59,17 @@
     .bot .bubble{background:var(--bubble-bot);border-top-left-radius:6px}
     .user{justify-content:flex-end}
     .user .bubble{background:var(--bubble-user);border-top-right-radius:6px}
-    .user .avatar{display:none}
+    .msg.user{ 
+  justify-content: flex-end; 
+  flex-direction: row-reverse;  /* đảo thứ tự: avatar ra ngoài bên phải */
+}
+.user .avatar{ 
+  display: flex;                /* đảm bảo avatar hiển thị */
+}
+.user .bubble{ 
+  border-top-right-radius: 6px; /* bo góc cho đẹp */
+}
+
     .tools{display:flex;gap:8px;margin-top:6px}
     .btnx{
       font-size:12px;border:1px solid var(--border);padding:4px 8px;border-radius:8px;
