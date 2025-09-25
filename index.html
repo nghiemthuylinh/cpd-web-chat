@@ -7,122 +7,49 @@
   <link rel="icon" href="logo.png">
   <style>
     :root{
-      /* Edison brand palette */
-      --brand:       #0a5a4b;  /* primary */
-      --brand-600:   #09604f;  /* hover of primary */
-      --accent-1:    #9baf4b;
-      --accent-2:    #f05a23;  /* CTA / user bubble */
-      --accent-3:    #faaf28;  /* badge */
-      --accent-4:    #915028;
-      --neutral:     #b4b4b4;
-
-      /* Light surfaces */
-      --bg:    #f7f9fc;
-      --card:  #ffffff;
-      --text:  #0b1220;
-      --muted: #5b6b86;
-
-      /* Bubbles */
-      --bubble-bot:  #e7f2ef;  /* very light green */
-      --bubble-user: #ffe9e1;  /* very light orange */
-
-      --border: #e5e9f0;
-      --radius: 16px;
-      --shadow: 0 10px 24px rgba(17, 24, 39, .06);
-.message {
-    white-space: pre-wrap;     /* giữ xuống dòng hợp lý */
-    word-break: keep-all;      /* không tự động bẻ từ */
-    overflow-wrap: break-word; /* chỉ ngắt khi cần */
-}
-.body, .chat-container {
-    font-family: 'Candara', 'Cambria', sans-serif;
-    font-size: 15px;
-    line-height: 1.5;
-}
-
+      --brand:#0a5a4b; --brand-600:#09604f;
+      --accent-1:#9baf4b; --accent-2:#f05a23; --accent-3:#faaf28; --accent-4:#915028; --neutral:#b4b4b4;
+      --bg:#f7f9fc; --card:#ffffff; --text:#0b1220; --muted:#5b6b86;
+      --bubble-bot:#e7f2ef; --bubble-user:#ffe9e1;
+      --border:#e5e9f0; --radius:16px; --shadow:0 10px 24px rgba(17,24,39,.06);
     }
-
     *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font:16px/1.55 Candara, Segoe UI, system-ui, sans-serif;
+    }
     .wrap{max-width:920px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:22px}
-
-    /* Header */
     .top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
     .logo{width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--border)}
     .title{font-weight:800;letter-spacing:.2px}
     .subtitle{font-size:12px;color:var(--muted)}
     .badge{margin-left:auto;padding:6px 10px;border-radius:999px;background:rgba(250,175,40,.18);color:#915a00;font-size:12px;border:1px solid #ffd48c}
-
-    /* Chat area */
-    .chat{
-      flex:1;background:var(--card);border-radius:var(--radius);
-      padding:16px;overflow:auto;border:1px solid var(--border);box-shadow:var(--shadow)
-    }
-    .msg{display:flex;gap:10px;margin:12px 2px}
-    .msg .avatar{
-      width:32px;height:32px;border-radius:50%;flex:0 0 32px;
-      display:flex;align-items:center;justify-content:center;overflow:hidden;
-      background:#e9eef7;color:#274472;font-weight:700;border:1px solid var(--border)
-    }
+    .chat{flex:1;background:var(--card);border-radius:var(--radius);padding:16px;overflow:auto;border:1px solid var(--border);box-shadow:var(--shadow)}
+    .msg{display:flex;gap:10px;margin:12px 2px;align-items:flex-end}
+    .msg .avatar{width:32px;height:32px;border-radius:50%;flex:0 0 32px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#e9eef7;color:#274472;font-weight:700;border:1px solid var(--border)}
     .msg .avatar img{width:32px;height:32px;object-fit:cover;border-radius:50%}
-    .bubble{max-width:75%;padding:12px 14px;border-radius:14px;position:relative;border:1px solid var(--border)}
+    .bubble{display:inline-block;max-width:75%;padding:12px 14px;border-radius:14px;position:relative;border:1px solid var(--border);word-break:break-word;font-family:Candara, Segoe UI, system-ui, sans-serif}
     .meta{font-size:12px;color:var(--muted);margin-top:6px}
-    .bot .bubble{background:var(--bubble-bot);border-top-left-radius:6px}
-    .user{justify-content:flex-end}
-    .user .bubble{background:var(--bubble-user);border-top-right-radius:6px}
-    .message.user {
-    text-align: right;       /* căn phải */
-    align-self: flex-end;    /* nếu dùng flexbox */
-    background: #ffecec;     /* màu nền nhạt hơn cho dễ phân biệt */
-}
-.msg.user{ 
-  justify-content: flex-end; 
-  flex-direction: row-reverse;  /* đảo thứ tự: avatar ra ngoài bên phải */
-}
-.user .avatar{ 
-  display: flex;                /* đảm bảo avatar hiển thị */
-}
-.user .bubble{ 
-  border-top-right-radius: 6px; /* bo góc cho đẹp */
-}
-
-    .tools{display:flex;gap:8px;margin-top:6px}
-    .btnx{
-      font-size:12px;border:1px solid var(--border);padding:4px 8px;border-radius:8px;
-      background:#f4f7fb;color:#2a3a4f;cursor:pointer
-    }
-    .btnx:hover{background:#eef2f9}
-
-    /* Quick prompts */
+    .bot .bubble{background:var(--bubble-bot);border-top-left-radius:6px;margin-right:8px}
+    .msg.user{justify-content:flex-end;flex-direction:row-reverse}
+    .user .avatar{display:flex}
+    .user .bubble{background:var(--bubble-user);border-top-right-radius:6px;margin-left:8px;white-space:nowrap}
     .prompts{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
-    .prompts .qp{
-      background:#f4f7fb;border:1px solid var(--border);
-      padding:6px 10px;border-radius:999px;cursor:pointer;font-size:14px;color:var(--text)
-    }
+    .prompts .qp{background:#f4f7fb;border:1px solid var(--border);padding:6px 10px;border-radius:999px;cursor:pointer;font-size:14px;color:var(--text)}
     .prompts .qp:hover{background:var(--accent-1);color:#fff;border-color:var(--accent-1)}
-
-    /* Input bar */
     .bar{display:flex;gap:10px;margin-top:12px}
-    textarea{
-      flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--border);
-      background:#fff;color:var(--text);resize:vertical;min-height:44px;max-height:160px;
-      box-shadow:0 1px 0 rgba(17,24,39,.03) inset
-    }
-    button.send{
-      padding:12px 16px;border-radius:12px;border:1px solid #e7c7bc;cursor:pointer;
-      background:var(--accent-2);color:white;font-weight:700;box-shadow:0 2px 0 rgba(0,0,0,.04)
-    }
+    textarea{flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:#fff;color:var(--text);resize:vertical;min-height:44px;max-height:160px;box-shadow:0 1px 0 rgba(17,24,39,.03) inset;font-family:Candara, Segoe UI, system-ui, sans-serif}
+    button.send{padding:12px 16px;border-radius:12px;border:1px solid #e7c7bc;cursor:pointer;background:var(--accent-2);color:white;font-weight:700;box-shadow:0 2px 0 rgba(0,0,0,.04)}
     button.send:hover{background:#d64f1f}
     button:disabled{opacity:.6;cursor:not-allowed}
     .footer{margin-top:12px;font-size:12px;color:var(--muted);text-align:center}
-
-    /* Typing dots */
     .typing{display:inline-block}
     .typing span{display:inline-block;width:6px;height:6px;margin:0 2px;background:#9fb2c9;border-radius:50%;opacity:.6;animation:blink 1.2s infinite}
     .typing span:nth-child(2){animation-delay:.2s}
     .typing span:nth-child(3){animation-delay:.4s}
     @keyframes blink{0%,80%,100%{opacity:.3}40%{opacity:1}}
-
     @media (max-width:640px){.bubble{max-width:85%}}
   </style>
 </head>
@@ -160,57 +87,37 @@
     const $inp  = document.getElementById('inp');
     const $btn  = document.getElementById('btn');
 
-    const KEY = 'cpd_chat_history_light_v2';
+    const KEY = 'cpd_chat_history_light_v5';
     const history = JSON.parse(localStorage.getItem(KEY) || '[]');
 
     function saveHistory(){ localStorage.setItem(KEY, JSON.stringify(history)); }
     function timeStr(iso){ return new Date(iso).toLocaleString(); }
     function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
 
-    // Bullet & xuống dòng cơ bản
     function formatReply(text){
-  let html = (text || "").replace(/\n/g,'<br>');
-  // thêm 👉 trước nội dung bullet
-  html = html.replace(/^- (.*)$/gm,'<li>👉 $1</li>');
-  html = html.replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>');
-  return html;
-}
+      let html = (text || "").replace(/\n/g,'<br>');
+      html = html.replace(/^- (.*)$/gm,'<li>👉 $1</li>');
+      html = html.replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>');
+      return html;
+    }
 
-
-    // Render bubble; user -> escape; bot -> html (đã format)
     function bubbleHTML(role, content, t){
       const side = role === 'user' ? 'user' : 'bot';
       const ava  = side === 'bot'
         ? `<div class="avatar"><img src="bot.png" alt="Bot"></div>`
         : `<div class="avatar"><img src="user.png" alt="User"></div>`;
-
-      const tools = side==='bot'
-        ? `<div class="tools"><button class="btnx" data-copy="${esc(content)}">Copy</button></div>`
-        : '';
-
-      const safeContent = side==='user' ? esc(content) : content; // bot cho phép HTML đã format
-
-      return `
-      <div class="msg ${side}">
-        ${ava}
-        <div>
-          <div class="bubble">${safeContent}</div>
-          ${tools}
-          <div class="meta">${timeStr(t)}</div>
-        </div>
-      </div>`;
+      const safeContent = side==='user' ? esc(content) : content;
+      return `<div class="msg ${side}">${ava}<div><div class="bubble">${safeContent}</div><div class="meta">${timeStr(t)}</div></div></div>`;
     }
 
     function render(){
       $chat.innerHTML = history.map(m => bubbleHTML(m.role, m.role==='user' ? esc(m.content) : formatReply(m.content), m.t)).join('');
       $chat.scrollTop = $chat.scrollHeight;
     }
-
     function addMessage(role, content){
       const item = { role, content, t: new Date().toISOString() };
       history.push(item); saveHistory(); render();
     }
-
     function showTyping(){
       const t = new Date().toISOString();
       const html = bubbleHTML('assistant', `<span class="typing"><span></span><span></span><span></span></span>`, t);
@@ -218,7 +125,6 @@
       $chat.scrollTop = $chat.scrollHeight;
       return t;
     }
-
     function replaceLastBotBubbleHTML(html){
       const nodes = $chat.querySelectorAll('.msg.bot .bubble');
       for(let i=nodes.length-1;i>=0;i--){
@@ -227,9 +133,7 @@
       $chat.scrollTop = $chat.scrollHeight;
     }
 
-    // Typewriter “giả streaming”
     function typeOutHTML(finalHTML, bubbleNode, speed=8){
-      // gõ dần dưới dạng text để mượt, rồi chốt bằng HTML đã format
       const plain = finalHTML
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<\/?ul>|<\/?li>/gi, '')
@@ -245,79 +149,49 @@
       });
     }
 
-    // Copy-to-clipboard
-    $chat.addEventListener('click', e=>{
-      const btn = e.target.closest('.btnx');
-      if(!btn) return;
-      const txt = btn.getAttribute('data-copy') || '';
-      navigator.clipboard.writeText(txt).then(()=>{
-        btn.textContent='Đã copy'; setTimeout(()=>btn.textContent='Copy',1200);
-      });
-    });
-
-    // Quick prompts
     document.querySelectorAll('.prompts .qp').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        $inp.value = btn.textContent;
-        send();
-      });
+      btn.addEventListener('click', ()=>{ $inp.value = btn.textContent; send(); });
     });
 
-    // Khởi tạo lời chào / render lịch sử
     if (!history.length) {
       addMessage('assistant','Chào bạn 👋 Mình là CPD Coach Edison (Light). Bạn muốn hỏi gì về CPD hôm nay?');
     } else {
       render();
     }
 
-    // === SEND (JSON + typewriter) ===
-async function send(){
-  // 1) Lấy & làm sạch input người dùng
-  let text = $inp.value.trim();
-  if (!text) return;
-  // Gộp mọi newline thành 1 khoảng trắng, tránh tự xuống dòng với câu ngắn
-  text = text.replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ');
+    async function send(){
+      let text = $inp.value.trim();
+      if (!text) return;
+      text = text.replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ');
+      $inp.value = ''; $inp.focus(); $btn.disabled = true; $inp.disabled = true;
 
-  // 2) Khóa UI và hiển thị tin người dùng + typing
-  $inp.value = '';
-  $inp.focus();
-  $btn.disabled = true;
-  $inp.disabled = true;
+      addMessage('user', text);
+      showTyping();
 
-  addMessage('user', text);
-  showTyping();
+      try{
+        const res = await fetch(ENDPOINT, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ messages: history })
+        });
+        if(!res.ok) throw new Error('Server trả trạng thái ' + res.status);
 
-  try{
-    // 3) Gọi server (trả JSON { reply })
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: history })
-    });
-    if (!res.ok) throw new Error('Server trả trạng thái ' + res.status);
+        const data = await res.json();
+        const finalText = data.reply || '[Không có phản hồi]';
+        const finalHTML = formatReply(finalText);
 
-    const data = await res.json();
-    const finalText = data.reply || '[Không có phản hồi]';
-    const finalHTML = formatReply(finalText); // xuống dòng + bullet 👉
+        const nodes = $chat.querySelectorAll('.msg.bot .bubble');
+        const bubble = nodes[nodes.length-1];
+        await typeOutHTML(finalHTML, bubble, 8);
 
-    // 4) Gõ dần vào bubble “đang gõ…”
-    const nodes = $chat.querySelectorAll('.msg.bot .bubble');
-    const bubble = nodes[nodes.length - 1];
-    await typeOutHTML(finalHTML, bubble, 8); // chỉnh tốc độ tại đây (ms/char)
+        addMessage('assistant', finalText);
+      }catch(err){
+        replaceLastBotBubbleHTML('⚠️ Lỗi: '+ esc(err.message));
+      }finally{
+        $btn.disabled = false; $inp.disabled = false;
+      }
+    }
 
-    // 5) Lưu hội thoại (dạng text thô, lần sau render() sẽ format lại)
-    addMessage('assistant', finalText);
-  } catch (err) {
-    replaceLastBotBubbleHTML('⚠️ Lỗi: ' + esc(err.message));
-  } finally {
-    // 6) Mở khóa UI
-    $btn.disabled = false;
-    $inp.disabled = false;
-  }
-}
-
-
-    // Enter = gửi, Shift+Enter = xuống dòng
     $btn.addEventListener('click', send);
     $inp.addEventListener('keydown', (e)=>{
       if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); }
