@@ -255,40 +255,51 @@
     }
 
     // === SEND (JSON + typewriter) ===
-    async function send(){
-      const text = $inp.value.trim();
-      if(!text) return;
-      $inp.value = ''; $inp.focus(); $btn.disabled = true; $inp.disabled = true;
+async function send(){
+  // 1) Lấy & làm sạch input người dùng
+  let text = $inp.value.trim();
+  if (!text) return;
+  // Gộp mọi newline thành 1 khoảng trắng, tránh tự xuống dòng với câu ngắn
+  text = text.replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ');
 
-      addMessage('user', text);
-      showTyping();
+  // 2) Khóa UI và hiển thị tin người dùng + typing
+  $inp.value = '';
+  $inp.focus();
+  $btn.disabled = true;
+  $inp.disabled = true;
 
-      try{
-        const res = await fetch(ENDPOINT, {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ messages: history })
-        });
-        if(!res.ok) throw new Error('Server trả trạng thái ' + res.status);
+  addMessage('user', text);
+  showTyping();
 
-        // Nhận JSON { reply: "..." }
-        const data = await res.json();
-        const finalText = data.reply || '[Không có phản hồi]';
-        const finalHTML = formatReply(finalText);
+  try{
+    // 3) Gọi server (trả JSON { reply })
+    const res = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: history })
+    });
+    if (!res.ok) throw new Error('Server trả trạng thái ' + res.status);
 
-        // Lấy bubble 'đang gõ' để gõ dần
-        const nodes = $chat.querySelectorAll('.msg.bot .bubble');
-        const bubble = nodes[nodes.length-1];
-        await typeOutHTML(finalHTML, bubble, 8); // tốc độ gõ
+    const data = await res.json();
+    const finalText = data.reply || '[Không có phản hồi]';
+    const finalHTML = formatReply(finalText); // xuống dòng + bullet 👉
 
-        // Lưu hội thoại ở dạng text để lần sau render() format lại
-        addMessage('assistant', finalText);
-      }catch(err){
-        replaceLastBotBubbleHTML('⚠️ Lỗi: '+ esc(err.message));
-      }finally{
-        $btn.disabled = false; $inp.disabled = false;
-      }
-    }
+    // 4) Gõ dần vào bubble “đang gõ…”
+    const nodes = $chat.querySelectorAll('.msg.bot .bubble');
+    const bubble = nodes[nodes.length - 1];
+    await typeOutHTML(finalHTML, bubble, 8); // chỉnh tốc độ tại đây (ms/char)
+
+    // 5) Lưu hội thoại (dạng text thô, lần sau render() sẽ format lại)
+    addMessage('assistant', finalText);
+  } catch (err) {
+    replaceLastBotBubbleHTML('⚠️ Lỗi: ' + esc(err.message));
+  } finally {
+    // 6) Mở khóa UI
+    $btn.disabled = false;
+    $inp.disabled = false;
+  }
+}
+
 
     // Enter = gửi, Shift+Enter = xuống dòng
     $btn.addEventListener('click', send);
