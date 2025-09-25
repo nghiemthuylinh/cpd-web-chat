@@ -29,6 +29,17 @@
       --border: #e5e9f0;
       --radius: 16px;
       --shadow: 0 10px 24px rgba(17, 24, 39, .06);
+.message {
+    white-space: pre-wrap;     /* giữ xuống dòng hợp lý */
+    word-break: keep-all;      /* không tự động bẻ từ */
+    overflow-wrap: break-word; /* chỉ ngắt khi cần */
+}
+.body, .chat-container {
+    font-family: 'Candara', 'Cambria', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
     }
 
     *{box-sizing:border-box}
@@ -59,7 +70,12 @@
     .bot .bubble{background:var(--bubble-bot);border-top-left-radius:6px}
     .user{justify-content:flex-end}
     .user .bubble{background:var(--bubble-user);border-top-right-radius:6px}
-    .msg.user{ 
+    .message.user {
+    text-align: right;       /* căn phải */
+    align-self: flex-end;    /* nếu dùng flexbox */
+    background: #ffecec;     /* màu nền nhạt hơn cho dễ phân biệt */
+}
+.msg.user{ 
   justify-content: flex-end; 
   flex-direction: row-reverse;  /* đảo thứ tự: avatar ra ngoài bên phải */
 }
