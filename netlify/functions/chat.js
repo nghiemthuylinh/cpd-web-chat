@@ -1,39 +1,28 @@
-// netlify/functions/chat.js
+// netlify/functions/chat.js  (CommonJS, không cần node-fetch)
 const API_BASE = "https://api.openai.com/v1";
 
-// CORS dùng cho frontend fetch từ trình duyệt
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
-
 exports.handler = async (event, context) => {
-  // Preflight cho CORS
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers: CORS };
-  }
-
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, headers: CORS, body: "Method Not Allowed" };
+    return { statusCode: 405, body: "Method Not Allowed" };
   }
 
   const { OPENAI_API_KEY, ASSISTANT_ID, OFFICE_LOG_WEBHOOK, LOG_TOKEN } = process.env;
   if (!OPENAI_API_KEY || !ASSISTANT_ID) {
-    return { statusCode: 500, headers: CORS, body: "Missing env OPENAI_API_KEY or ASSISTANT_ID" };
+    return { statusCode: 500, body: "Missing env OPENAI_API_KEY or ASSISTANT_ID" };
   }
 
   try {
     const body = JSON.parse(event.body || "{}");
     const messages = Array.isArray(body.messages) ? body.messages : [];
-    const lastUserMsg = messages.filter(m => m.role === "user").slice(-1)[0]?.content || "";
+    const lastUserMsg =
+      messages.filter(m => m.role === "user").slice(-1)[0]?.content || "";
 
-    // ===== 1) Create thread (Assistants API v2 cần header OpenAI-Beta) =====
+    // 1) Tạo thread với toàn bộ lịch sử
     const threadResp = await fetch(`${API_BASE}/threads`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
-        "OpenAI-Beta": "assistants=v2",
       },
       body: JSON.stringify({ messages }),
     });
@@ -43,13 +32,12 @@ exports.handler = async (event, context) => {
     }
     const thread = await threadResp.json();
 
-    // ===== 2) Run assistant =====
+    // 2) Tạo run cho assistant
     const runResp = await fetch(`${API_BASE}/threads/${thread.id}/runs`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
-        "OpenAI-Beta": "assistants=v2",
       },
       body: JSON.stringify({ assistant_id: ASSISTANT_ID }),
     });
@@ -59,53 +47,32 @@ exports.handler = async (event, context) => {
     }
     const run = await runResp.json();
 
-    // ===== 3) Poll run status =====
+    // 3) Poll trạng thái cho tới khi xong
     let reply = "";
-    // chờ tối đa ~30s
-    const started = Date.now();
     for (;;) {
       await new Promise(r => setTimeout(r, 1000));
-
-      const statusResp = await fetch(`${API_BASE}/threads/${thread.id}/runs/${run.id}`, {
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "OpenAI-Beta": "assistants=v2",
-        }
-      });
-      if (!statusResp.ok) {
-        const t = await statusResp.text();
-        throw new Error(`Check run failed: ${statusResp.status} ${t}`);
-      }
+      const statusResp = await fetch(
+        `${API_BASE}/threads/${thread.id}/runs/${run.id}`,
+        { headers: { Authorization: `Bearer ${OPENAI_API_KEY}` } }
+      );
       const status = await statusResp.json();
 
       if (status.status === "completed") {
-        const msgResp = await fetch(`${API_BASE}/threads/${thread.id}/messages`, {
-          headers: {
-            Authorization: `Bearer ${OPENAI_API_KEY}`,
-            "OpenAI-Beta": "assistants=v2",
-          }
-        });
-        if (!msgResp.ok) {
-          const t = await msgResp.text();
-          throw new Error(`List messages failed: ${msgResp.status} ${t}`);
-        }
+        const msgResp = await fetch(
+          `${API_BASE}/threads/${thread.id}/messages`,
+          { headers: { Authorization: `Bearer ${OPENAI_API_KEY}` } }
+        );
         const msgData = await msgResp.json();
         const last = msgData.data?.find(m => m.role === "assistant");
-        const part = last?.content?.[0];
-        reply = (part?.type === "text" && part?.text?.value) ? part.text.value : "[Không có phản hồi]";
+        reply = last?.content?.[0]?.text?.value || "[Không có phản hồi]";
         break;
       }
-
       if (["failed", "expired", "cancelled"].includes(status.status)) {
         throw new Error(`Run ${status.status}`);
       }
-
-      if (Date.now() - started > 30000) {
-        throw new Error("Run timeout (>30s)");
-      }
     }
 
-    // ===== 4) Log sang Power Automate (tùy chọn) =====
+    // 4) Log về Power Automate (nếu cấu hình)
     try {
       if (OFFICE_LOG_WEBHOOK && LOG_TOKEN) {
         const logPayload = {
@@ -118,12 +85,15 @@ exports.handler = async (event, context) => {
           threadId: thread.id,
           runId: run.id,
           user: lastUserMsg,
-          bot: reply
+          bot: reply,
         };
         await fetch(OFFICE_LOG_WEBHOOK, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-Log-Token": LOG_TOKEN },
-          body: JSON.stringify(logPayload)
+          headers: {
+            "Content-Type": "application/json",
+            "X-Log-Token": LOG_TOKEN,
+          },
+          body: JSON.stringify(logPayload),
         });
       }
     } catch (e) {
@@ -132,12 +102,11 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      headers: { ...CORS, "Content-Type": "application/json" },
-      body: JSON.stringify({ reply })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reply }),
     };
-
   } catch (err) {
     console.error("Function error:", err?.message || err);
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: err?.message || "Unknown" }) };
+    return { statusCode: 500, body: `Error: ${err?.message || "Unknown"}` };
   }
 };
