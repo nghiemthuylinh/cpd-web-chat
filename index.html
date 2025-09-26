@@ -14,31 +14,25 @@
       --border:#e5e9f0; --radius:16px; --shadow:0 10px 24px rgba(17,24,39,.06);
     }
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      background:var(--bg);
-      color:var(--text);
-      font:16px/1.55 Candara, Segoe UI, system-ui, sans-serif;
-    }
+    body{ margin:0; background:var(--bg); color:var(--text);
+      font:16px/1.55 Candara, Segoe UI, system-ui, sans-serif; }
     .wrap{max-width:920px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:22px}
     .top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
     .logo{width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--border)}
     .title{font-weight:800;letter-spacing:.2px}
     .subtitle{font-size:12px;color:var(--muted)}
     .badge{margin-left:auto;padding:6px 10px;border-radius:999px;background:rgba(250,175,40,.18);color:#915a00;font-size:12px;border:1px solid #ffd48c}
+
     .chat{flex:1;background:var(--card);border-radius:var(--radius);padding:16px;overflow:auto;border:1px solid var(--border);box-shadow:var(--shadow)}
     .msg{display:flex;gap:10px;margin:12px 2px;align-items:flex-end}
-    .msg .avatar{width:32px;height:32px;border-radius:50%;flex:0 0 32px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#e9eef7;color:#274472;font-weight:700;border:1px solid var(--border)}
+    .msg .avatar{width:32px;height:32px;border-radius:50%;flex:0 0 32px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#e9eef7;border:1px solid var(--border)}
     .msg .avatar img{width:32px;height:32px;object-fit:cover;border-radius:50%}
-    .bubble{display:inline-block;max-width:75%;padding:12px 14px;border-radius:14px;position:relative;border:1px solid var(--border);word-break:break-word;font-family:Candara, Segoe UI, system-ui, sans-serif}
+    .bubble{display:inline-block;max-width:80%;padding:12px 14px;border-radius:14px;position:relative;border:1px solid var(--border);word-break:break-word;overflow-wrap:anywhere;font-family:Candara, Segoe UI, system-ui, sans-serif}
     .meta{font-size:12px;color:var(--muted);margin-top:6px}
     .bot .bubble{background:var(--bubble-bot);border-top-left-radius:6px;margin-right:8px}
-    .msg.user{justify-content:flex-end;flex-direction:row-reverse;margin-left:auto;text-align:right;align-self:flex-end;background:#ffecec}
+    .msg.user{justify-content:flex-end;flex-direction:row-reverse;margin-left:auto}
     .user .avatar{display:flex}
-    .user .bubble{background:var(--bubble-user);border-top-right-radius:6px;margin-left:8px;white-space:pre-wrap;          /* cho phép xuống dòng */
-  word-break:keep-all;       /* bẻ từ dài */
-  overflow-wrap:break-word;      /* bẻ luôn nếu từ quá dài */
-}
+    .user .bubble{background:var(--bubble-user);border-top-right-radius:6px;margin-left:8px;white-space:normal}
     .prompts{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
     .prompts .qp{background:#f4f7fb;border:1px solid var(--border);padding:6px 10px;border-radius:999px;cursor:pointer;font-size:14px;color:var(--text)}
     .prompts .qp:hover{background:var(--accent-1);color:#fff;border-color:var(--accent-1)}
@@ -48,12 +42,13 @@
     button.send:hover{background:#d64f1f}
     button:disabled{opacity:.6;cursor:not-allowed}
     .footer{margin-top:12px;font-size:12px;color:var(--muted);text-align:center}
+
     .typing{display:inline-block}
     .typing span{display:inline-block;width:6px;height:6px;margin:0 2px;background:#9fb2c9;border-radius:50%;opacity:.6;animation:blink 1.2s infinite}
     .typing span:nth-child(2){animation-delay:.2s}
     .typing span:nth-child(3){animation-delay:.4s}
     @keyframes blink{0%,80%,100%{opacity:.3}40%{opacity:1}}
-    @media (max-width:640px){.bubble{max-width:85%}}
+    @media (max-width:640px){.bubble{max-width:88%}}
   </style>
 </head>
 <body>
@@ -90,12 +85,12 @@
     const $inp  = document.getElementById('inp');
     const $btn  = document.getElementById('btn');
 
-    const KEY = 'cpd_chat_history_light_v5';
+    const KEY = 'cpd_chat_history_light_final';
     const history = JSON.parse(localStorage.getItem(KEY) || '[]');
 
-    function saveHistory(){ localStorage.setItem(KEY, JSON.stringify(history)); }
-    function timeStr(iso){ return new Date(iso).toLocaleString(); }
-    function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+    const saveHistory = () => localStorage.setItem(KEY, JSON.stringify(history));
+    const timeStr = iso => new Date(iso).toLocaleString();
+    const esc = s => (s||"").replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
     function formatReply(text){
       let html = (text || "").replace(/\n/g,'<br>');
@@ -109,8 +104,8 @@
       const ava  = side === 'bot'
         ? `<div class="avatar"><img src="bot.png" alt="Bot"></div>`
         : `<div class="avatar"><img src="user.png" alt="User"></div>`;
-      const safeContent = side==='user' ? esc(content) : content;
-      return `<div class="msg ${side}">${ava}<div><div class="bubble">${safeContent}</div><div class="meta">${timeStr(t)}</div></div></div>`;
+      const safe = side==='user' ? esc(content) : content;
+      return `<div class="msg ${side}">${ava}<div><div class="bubble">${safe}</div><div class="meta">${timeStr(t)}</div></div></div>`;
     }
 
     function render(){
@@ -126,21 +121,9 @@
       const html = bubbleHTML('assistant', `<span class="typing"><span></span><span></span><span></span></span>`, t);
       $chat.insertAdjacentHTML('beforeend', html);
       $chat.scrollTop = $chat.scrollHeight;
-      return t;
     }
-    function replaceLastBotBubbleHTML(html){
-      const nodes = $chat.querySelectorAll('.msg.bot .bubble');
-      for(let i=nodes.length-1;i>=0;i--){
-        if(nodes[i].innerHTML.includes('typing')){ nodes[i].innerHTML = html; break; }
-      }
-      $chat.scrollTop = $chat.scrollHeight;
-    }
-
     function typeOutHTML(finalHTML, bubbleNode, speed=8){
-      const plain = finalHTML
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/?ul>|<\/?li>/gi, '')
-        .replace(/&nbsp;/g,' ');
+      const plain = finalHTML.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?ul>|<\/?li>/gi, '').replace(/&nbsp;/g,' ');
       let i=0;
       return new Promise(resolve=>{
         const timer=setInterval(()=>{
@@ -156,11 +139,8 @@
       btn.addEventListener('click', ()=>{ $inp.value = btn.textContent; send(); });
     });
 
-    if (!history.length) {
-      addMessage('assistant','Chào bạn 👋 Mình là CPD Coach Edison (Light). Bạn muốn hỏi gì về CPD hôm nay?');
-    } else {
-      render();
-    }
+    if (!history.length) addMessage('assistant','Chào bạn 👋 Mình là CPD Coach Edison (Light). Bạn muốn hỏi gì về CPD hôm nay?');
+    else render();
 
     async function send(){
       let text = $inp.value.trim();
@@ -189,14 +169,16 @@
 
         addMessage('assistant', finalText);
       }catch(err){
-        replaceLastBotBubbleHTML('⚠️ Lỗi: '+ esc(err.message));
+        const nodes = $chat.querySelectorAll('.msg.bot .bubble');
+        const bubble = nodes[nodes.length-1];
+        bubble.innerHTML = '⚠️ Lỗi: ' + esc(err.message);
       }finally{
         $btn.disabled = false; $inp.disabled = false;
       }
     }
 
     $btn.addEventListener('click', send);
-    $inp.addEventListener('keydown', (e)=>{
+    $inp.addEventListener('keydown', e=>{
       if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); }
     });
   </script>
